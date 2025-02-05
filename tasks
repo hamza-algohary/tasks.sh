@@ -1,0 +1,122 @@
+#!/bin/bash
+
+INSTALLATION_DIR=~/.local/bin/tasks
+JOBS_LIST_PATH=~/.tasks
+
+kill() {
+    killall tasks
+}
+
+refresh() {
+    readarray -t JOBS < $JOBS_LIST_PATH
+    for (( i=0; i<${#JOBS[@]}; i++ ));
+    do
+        job=${JOBS[$i]}
+        HOUR=$(echo $job | cut -d ";" -f 1)      #"${PARAMS[0]}"
+        MINUTE=$(echo $job | cut -d ";" -f 2)     #"${PARAMS[1]}"
+        COMMAND=$(echo $job | cut -d ";" -f 3)    #"${PARAMS[2]}"
+        # echo command = $COMMAND
+        # echo minute = $MINUTE
+        # echo hour = $HOUR
+        # date '+%H'
+        # date '+%M'
+        if (( "$HOUR" == $(date '+%H') )) && (( "$MINUTE" == "$(date '+%M')" )) && [ "$(date '+%S')" = "00" ]
+        then
+            echo event
+            bash -c "$COMMAND" &
+        fi
+    done
+    echo "refreshing"
+}
+
+start() {
+    while true
+    do
+        sleep 1
+        refresh
+    done
+}
+
+install() {
+    cat $0 > $INSTALLATION_DIR
+    chmod +x $INSTALLATION_DIR
+}
+
+# command , time
+add() {
+    COMMAND="$1"
+    TIME_HOUR="$2"
+    TIME_MINUTE="$3"
+
+    if [ "$COMMAND" = "" ] || [ $TIME_HOUR = "" ] || [ $TIME_MINUTE = "" ]
+    then
+        echo "Invalid arguments: please specify command, hour and minute]."
+    else
+        echo "$TIME_HOUR;$TIME_MINUTE;$COMMAND" >> $JOBS_LIST_PATH
+        sort -u -o $JOBS_LIST_PATH $JOBS_LIST_PATH
+    fi
+}
+
+list() {
+    cat -n $JOBS_LIST_PATH
+}
+
+remove() {
+    if [ "$1" = "" ]
+    then
+        echo "Specify task number to be removed or \"all\" to remove all tasks"
+    elif [ "$1" = "all" ]
+    then
+        rm $JOBS_LIST_PATH
+        touch $JOBS_LIST_PATH
+    else
+        sed -i "${1}d" $JOBS_LIST_PATH
+    fi
+}
+
+help() {
+    echo "tasks - schedule commands to run periodically"
+    echo "Commands:"
+    echo "  install                          - install script in $INSTALLATION_DIR"
+    echo "  list                             - list all available tasks"
+    echo "  add <command> <hour> <minute>    - schedule a command to run daily at <hour> and <minute>"
+    echo "  remove <number>                  - remove task"
+    echo "  kill                             - kill all running instances of $0"
+    echo "  help                             - show this help message"
+    echo "  start                            - start tasks runner process"
+    echo 
+    echo "To install this program run \"tasks install\" once, then schedule \"tasks start\" to run at startup"
+}
+
+
+if [ "$1" = "kill" ]
+then
+    kill
+elif [ "$1" = "start" ]
+then
+    start
+elif [ "$1" = "install" ]
+then
+    install
+elif [ "$1" = "" ]
+then
+    echo "What do you want to do?"
+elif [ "$1" = "add" ] 
+then
+    add "$2" "$3" "$4"
+elif [ "$1" = "remove" ] || [ "$1" = "rm" ]
+then
+    remove $2
+elif [ "$1" = "list" ]
+then
+    list
+elif [ "$1" = "help" ] || [ "$1" = "--help" ]
+then
+    help
+elif [ "$1" = "kill" ]
+then
+    kill
+else
+    echo "Unknown Argument: $1"
+fi
+

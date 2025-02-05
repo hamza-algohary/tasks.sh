@@ -16,4 +16,4 @@ git clone github.com/hamza-algohary/tasks
 cd tasks
 ./tasks install
 ```
-Then schedule "tasks start" to run at startup
+Then schedule `tasks start` to run at startup
